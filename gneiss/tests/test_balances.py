@@ -9,6 +9,7 @@ from gneiss.balances import (balance_basis, _count_matrix,
 from gneiss.layouts import default_layout
 from skbio import TreeNode
 from skbio.util import get_data_path
+from skbio.stats.composition import _check_orthogonality
 
 
 class TestPlot(unittest.TestCase):
@@ -151,14 +152,23 @@ class TestBalances(unittest.TestCase):
             get_data_path('large_tree_basis.txt',
                           subfolder='data'))
         res_basis, res_keys = balance_basis(t)
+        _check_orthogonality(res_basis)
 
         exp_basis = exp_basis[:, ::-1]
         print(exp_basis.shape)
         for i in range(len(res_basis)):
             print(i)
+            print(exp_basis[i]- res_basis[i])
             npt.assert_allclose(exp_basis[i], res_basis[i])
 
-        npt.assert_allclose(exp_basis[:, ::-1], res_basis)
+        npt.assert_allclose(exp_basis[:, ::-1], res_basis, rtol=1e-5, atol=1e-5)
+
+    def test_balance_basis_large2(self):
+        fname = get_data_path('tree.nwk',
+                              subfolder='data')
+        t = TreeNode.read(fname)
+        res_basis, res_keys = balance_basis(t)
+        _check_orthogonality(res_basis)
 
 
 if __name__ == "__main__":
