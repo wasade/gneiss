@@ -9,7 +9,8 @@ from gneiss.balances import (balance_basis, _count_matrix,
 from gneiss.layouts import default_layout
 from skbio import TreeNode
 from skbio.util import get_data_path
-
+from skbio.stats.composition import _check_orthogonality
+from gneiss.util import rename_internal_nodes
 
 class TestPlot(unittest.TestCase):
 
@@ -48,8 +49,8 @@ class TestPlot(unittest.TestCase):
         tree = TreeNode.read([u"((a,b)c,d)r;"])
         balances = np.array([10, -10])
         tr, ts = balanceplot(balances, tree)
-        self.assertEquals(ts.mode, 'c')
-        self.assertEquals(ts.layout_fn[0], default_layout)
+        self.assertEqual(ts.mode, 'c')
+        self.assertEqual(ts.layout_fn[0], default_layout)
 
 
 class TestBalances(unittest.TestCase):
@@ -57,30 +58,31 @@ class TestBalances(unittest.TestCase):
     def test_count_matrix_base_case(self):
         tree = u"(a,b);"
         t = TreeNode.read([tree])
-        res, _ = _count_matrix(t)
-        exp = {'k': 0, 'l': 1, 'r': 1, 't': 0, 'tips': 2}
-        self.assertEqual(res[t], exp)
+        res, _, _ = _count_matrix(t)
 
-        exp = {'k': 0, 'l': 0, 'r': 0, 't': 0, 'tips': 1}
-        self.assertEqual(res[t[0]], exp)
+        exp = np.array([1, 1, 0, 0])
+        npt.assert_equal(res[0], exp)
 
-        exp = {'k': 0, 'l': 0, 'r': 0, 't': 0, 'tips': 1}
-        self.assertEqual(res[t[1]], exp)
+        exp = np.array([0, 0, 0, 0])
+        npt.assert_equal(res[1], exp)
+
+        exp = np.array([0, 0, 0, 0])
+        npt.assert_equal(res[2], exp)
 
     def test_count_matrix_unbalanced(self):
         tree = u"((a,b)c, d);"
         t = TreeNode.read([tree])
-        res, _ = _count_matrix(t)
+        res, _, _ = _count_matrix(t)
 
-        exp = {'k': 0, 'l': 2, 'r': 1, 't': 0, 'tips': 3}
-        self.assertEqual(res[t], exp)
-        exp = {'k': 1, 'l': 1, 'r': 1, 't': 0, 'tips': 2}
-        self.assertEqual(res[t[0]], exp)
+        exp = np.array([1, 2, 0, 0])
+        npt.assert_equal(res[0], exp)
+        exp = np.array([1, 1, 1, 0])
+        npt.assert_equal(res[1], exp)
 
-        exp = {'k': 0, 'l': 0, 'r': 0, 't': 0, 'tips': 1}
-        self.assertEqual(res[t[1]], exp)
-        self.assertEqual(res[t[0][0]], exp)
-        self.assertEqual(res[t[0][1]], exp)
+        exp = np.array([0, 0, 0, 0])
+        npt.assert_equal(res[2], exp)
+        npt.assert_equal(res[3], exp)
+        npt.assert_equal(res[4], exp)
 
     def test_count_matrix_singleton_error(self):
         with self.assertRaises(ValueError):
@@ -150,8 +152,30 @@ class TestBalances(unittest.TestCase):
             get_data_path('large_tree_basis.txt',
                           subfolder='data'))
         res_basis, res_keys = balance_basis(t)
-        npt.assert_allclose(exp_basis[:, ::-1], res_basis)
+        _check_orthogonality(res_basis)
 
+        exp_basis = exp_basis[:, ::-1]
+        print(exp_basis.shape)
+        for i in range(len(res_basis)):
+            print(i)
+            print(exp_basis[i]- res_basis[i])
+            npt.assert_allclose(exp_basis[i], res_basis[i])
+
+        npt.assert_allclose(exp_basis[:, ::-1], res_basis, rtol=1e-5, atol=1e-5)
+
+    def test_balance_basis_large2(self):
+        fname = get_data_path('large_tree2.nwk',
+                              subfolder='data')
+        t = TreeNode.read(fname)
+        res_basis, res_keys = balance_basis(t)
+        _check_orthogonality(res_basis)
+
+    def test_balance_basis_small1(self):
+        fname = get_data_path('small_tree.nwk',
+                              subfolder='data')
+        t = TreeNode.read(fname)
+        res_basis, res_keys = balance_basis(t)
+        _check_orthogonality(res_basis)
 
 if __name__ == "__main__":
     unittest.main()
