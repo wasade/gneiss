@@ -1,11 +1,3 @@
-# ----------------------------------------------------------------------------
-# Copyright (c) 2016--, gneiss development team.
-#
-# Distributed under the terms of the Modified BSD License.
-#
-# The full license is in the file COPYING.txt, distributed with this software.
-# ----------------------------------------------------------------------------
-
 from __future__ import absolute_import, division, print_function
 import unittest
 import numpy as np
@@ -18,7 +10,7 @@ from gneiss.layouts import default_layout
 from skbio import TreeNode
 from skbio.util import get_data_path
 from skbio.stats.composition import _check_orthogonality
-
+from gneiss.util import rename_internal_nodes
 
 class TestPlot(unittest.TestCase):
 
@@ -172,12 +164,18 @@ class TestBalances(unittest.TestCase):
         npt.assert_allclose(exp_basis[:, ::-1], res_basis, rtol=1e-5, atol=1e-5)
 
     def test_balance_basis_large2(self):
-        fname = get_data_path('tree.nwk',
+        fname = get_data_path('large_tree2.nwk',
                               subfolder='data')
         t = TreeNode.read(fname)
         res_basis, res_keys = balance_basis(t)
         _check_orthogonality(res_basis)
 
+    def test_balance_basis_small1(self):
+        fname = get_data_path('small_tree.nwk',
+                              subfolder='data')
+        t = TreeNode.read(fname)
+        res_basis, res_keys = balance_basis(t)
+        _check_orthogonality(res_basis)
 
 if __name__ == "__main__":
     unittest.main()
